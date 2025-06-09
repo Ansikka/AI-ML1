@@ -1,40 +1,55 @@
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split, cross_val_score
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import r2_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
-# Step 1: Expanded Dataset with more features
-data = {
-    'area': [1500, 1800, 2400, 3000, 3500],
-    'bedrooms': [2, 3, 3, 4, 4],
-    'bathrooms': [1, 2, 2, 3, 3],
-    'stories': [1, 2, 2, 3, 2],
-    'parking': [1, 1, 2, 2, 3],
-    'age': [5, 10, 8, 3, 15],
-    'mainroad': [1, 0, 1, 1, 0],
-    'furnishing_status': [0, 1, 1, 2, 0],  # 0: Unfurnished, 1: Semi, 2: Furnished
-    'location': ['Urban', 'Suburban', 'Urban', 'Urban', 'Rural'],
-    'basement': [1, 0, 1, 1, 0],
-    'air_conditioning': [1, 1, 0, 1, 0],
-    'preferred_area_score': [5, 4, 4, 5, 3],
-    'price': [200000, 250000, 300000, 400000, 350000]
-}
+# Simulated dataset with advanced features
+np.random.seed(42)
+n_samples = 500
 
-df = pd.DataFrame(data)
+df = pd.DataFrame({
+    'area': np.random.randint(600, 4500, n_samples),
+    'bedrooms': np.random.randint(1, 6, n_samples),
+    'bathrooms': np.random.randint(1, 4, n_samples),
+    'stories': np.random.randint(1, 4, n_samples),
+    'parking': np.random.randint(0, 4, n_samples),
+    'age': np.random.randint(0, 50, n_samples),
+    'mainroad': np.random.choice([0, 1], n_samples),
+    'furnishing_status': np.random.choice([0, 1, 2], n_samples),
+    'location': np.random.choice(['Urban', 'Suburban', 'Rural'], n_samples),
+    'basement': np.random.choice([0, 1], n_samples),
+    'air_conditioning': np.random.choice([0, 1], n_samples),
+    'preferred_area_score': np.random.randint(1, 6, n_samples)
+})
 
-# Step 2: Features and labels
+# Price formula simulation for realism
+df['price'] = (
+    df['area'] * 70 +
+    df['bedrooms'] * 50000 +
+    df['bathrooms'] * 30000 +
+    df['parking'] * 20000 +
+    df['preferred_area_score'] * 25000 +
+    df['air_conditioning'] * 40000 +
+    df['basement'] * 35000 +
+    df['mainroad'] * 20000 +
+    np.random.normal(0, 50000, n_samples)
+)
+
+# Define features and target
 X = df.drop('price', axis=1)
 y = df['price']
 
-# Step 3: Preprocessing
+# Preprocessing
 numeric_features = ['area', 'bedrooms', 'bathrooms', 'stories', 'parking', 'age', 'preferred_area_score']
 categorical_features = ['location', 'furnishing_status', 'mainroad', 'basement', 'air_conditioning']
 
-# Pipelines for preprocessing
 numeric_transformer = StandardScaler()
 categorical_transformer = OneHotEncoder(drop='first')
 
@@ -43,41 +58,22 @@ preprocessor = ColumnTransformer([
     ('cat', categorical_transformer, categorical_features)
 ])
 
-# Step 4: Model pipeline
-model = Pipeline(steps=[
+# Model pipeline
+pipeline = Pipeline(steps=[
     ('preprocessor', preprocessor),
-    ('regressor', RandomForestRegressor(n_estimators=100, random_state=42))
+    ('model', RandomForestRegressor(n_estimators=150, random_state=42))
 ])
 
-# Step 5: Train/Test split
+# Split data
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Step 6: Train model
-model.fit(X_train, y_train)
+# Train model
+pipeline.fit(X_train, y_train)
 
-# Step 7: Predict and evaluate
-y_pred = model.predict(X_test)
-print("R² Score on Test Data:", r2_score(y_test, y_pred))
+# Evaluate
+y_pred = pipeline.predict(X_test)
+r2 = r2_score(y_test, y_pred)
+mae = mean_absolute_error(y_test, y_pred)
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
 
-# Step 8: Cross-validation score
-cv_scores = cross_val_score(model, X, y, cv=5, scoring='r2')
-print("Cross-Validated R² Score:", round(np.mean(cv_scores), 2))
-
-# Step 9: Predict new house
-new_house = pd.DataFrame([{
-    'area': 2500,
-    'bedrooms': 3,
-    'bathrooms': 2,
-    'stories': 2,
-    'parking': 2,
-    'age': 7,
-    'mainroad': 1,
-    'furnishing_status': 1,
-    'location': 'Urban',
-    'basement': 1,
-    'air_conditioning': 1,
-    'preferred_area_score': 5
-}])
-
-predicted_price = model.predict(new_house)
-print("Predicted Price for New House:", round(predicted_price[0], 2))
+r2, mae, rmse
