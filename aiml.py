@@ -46,7 +46,7 @@ df['price'] = (
 X = df.drop('price', axis=1)
 y = df['price']
 
-# Preprocessing
+
 numeric_features = ['area', 'bedrooms', 'bathrooms', 'stories', 'parking', 'age', 'preferred_area_score']
 categorical_features = ['location', 'furnishing_status', 'mainroad', 'basement', 'air_conditioning']
 
